@@ -1,0 +1,5 @@
+{
+  "dana@example.com": {"email": "dana@example.com", "plan": "pro", "status": "active", "mfa_enabled": true},
+  "lee@example.com": {"email": "lee@example.com", "plan": "free", "status": "active", "mfa_enabled": false},
+  "mo@example.com": {"email": "mo@example.com", "plan": "pro", "status": "locked", "mfa_enabled": true}
+}

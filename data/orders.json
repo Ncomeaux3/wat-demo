@@ -1,0 +1,5 @@
+{
+  "A1001": {"order_id": "A1001", "email": "dana@example.com", "total": 84.50, "status": "delivered", "days_since_delivery": 5, "returnable": true},
+  "A1002": {"order_id": "A1002", "email": "lee@example.com", "total": 240.00, "status": "delivered", "days_since_delivery": 45, "returnable": false},
+  "A1003": {"order_id": "A1003", "email": "mo@example.com", "total": 19.99, "status": "shipped", "days_since_delivery": 0, "returnable": true}
+}
