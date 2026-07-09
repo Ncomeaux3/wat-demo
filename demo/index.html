@@ -171,6 +171,8 @@
   @keyframes blink { 50% { opacity: 0; } }
   .note { font-size: .8rem; color: var(--muted); margin: 8px 0 0; max-width: 62ch; }
   .note strong { color: var(--ink); }
+  .clabel { font-family: var(--mono); font-size: .62rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 10px 0 4px; }
+  .splain { font-size: .85rem; color: var(--muted); margin: 3px 0 0; max-width: 60ch; text-wrap: pretty; }
   .bubble {
     margin-top: 8px; padding: 12px 15px; border-radius: 10px 10px 10px 3px;
     background: var(--panel2); border: 1px solid var(--line); font-size: .9rem; max-width: 62ch;
@@ -230,15 +232,17 @@
     <div class="expand">Workflows · Agents · Tools</div>
   </header>
   <p class="thesis">
-    Chain five AI steps that are each 90% reliable and the pipeline is right only
-    <strong>59% of the time</strong> (0.9<sup>5</sup> ≈ 0.59). WAT keeps the model in a narrow lane —
-    <strong>classify, choose, word</strong> — while deterministic code computes anything that must be
-    correct, and a <strong>human approves</strong> anything that leaves the building.
+    Ask an AI to handle a whole job in one shot and it will sometimes make things up.
+    And errors stack: if each step of a process is right 9 times out of 10, a five-step chain is
+    right only about <strong>6 times out of 10</strong>. WAT splits the work instead:
+    <strong>AI handles the judgment calls</strong> (sorting, choosing, wording),
+    <strong>ordinary software handles the facts</strong> (looking up records, applying policy — exact,
+    same answer every time), and <strong>a person approves</strong> anything before a customer sees it.
   </p>
   <div class="legend">
-    <span class="key ai">AI — judgment calls</span>
-    <span class="key code">Code — deterministic truth</span>
-    <span class="key human">Human — approval gate</span>
+    <span class="key ai">AI — reads &amp; decides (judgment)</span>
+    <span class="key code">Software — exact rules, same answer every time</span>
+    <span class="key human">Human — the final say</span>
   </div>
 
   <section class="deck" aria-label="Ticket input">
@@ -252,7 +256,7 @@
     <article class="panel naive" aria-label="Without WAT">
       <div class="phead">
         <h2>WITHOUT WAT
-          <span class="sub">One prompt does everything — no tools, no data, no review</span>
+          <span class="sub">The AI does the whole job in one go — no records, no rules, no reviewer</span>
         </h2>
         <button class="runbtn" id="runNaive">Run &nbsp;▸</button>
       </div>
@@ -264,7 +268,7 @@
     <article class="panel wat" aria-label="With WAT">
       <div class="phead">
         <h2>WITH WAT
-          <span class="sub">Scoped AI · deterministic tools · human gate</span>
+          <span class="sub">AI for judgment · software for facts · a person approves</span>
         </h2>
         <button class="runbtn" id="runWat">Run &nbsp;▸</button>
       </div>
@@ -280,11 +284,11 @@
   </section>
 
   <footer>
-    <p>This page is a faithful, offline simulation of the <code>wat-demo</code> reference implementation:
-    the classification rules, routing table, workflow SOPs, tool logic, and fixture data
-    (<code>data/orders.json</code>, <code>data/accounts.json</code>) are the real ones from the repo.
-    In production the same shape holds — the pipeline just runs behind a job queue with retries,
-    idempotent tools, and observability on every step.</p>
+    <p>This page is a faithful, offline simulation of the <code>wat-demo</code> code: the sorting
+    rules, playbooks, refund policy, and example records (<code>data/orders.json</code>,
+    <code>data/accounts.json</code>) are the real ones from the repository. In production the same
+    shape holds — the pipeline just runs inside your systems, with retries, logging, and a queue
+    of tickets feeding it.</p>
   </footer>
 </div>
 
@@ -383,12 +387,12 @@ function naiveFactCheck(sc, fab) {
   const items = [];
   if (sc.kind === "billing_known") {
     const o = ORDERS[sc.orderId]; const e = checkEligibility(o);
-    items.push(`Claimed <mark class="fab">${fab.amt}</mark> — the real order total in data/orders.json is <mark class="grounded">$${o.total.toFixed(2)}</mark>.`);
-    if (!e.eligible) items.push(`Worse: this order is <mark class="fab">not refundable at all</mark> (${o.days_since_delivery} days since delivery, returnable: ${o.returnable}). The model just promised money the policy doesn't allow.`);
+    items.push(`It claimed <mark class="fab">${fab.amt}</mark> — the real order total in your records is <mark class="grounded">$${o.total.toFixed(2)}</mark>.`);
+    if (!e.eligible) items.push(`Worse: this order is <mark class="fab">not refundable at all</mark> (delivered ${o.days_since_delivery} days ago${o.returnable ? "" : ", marked non-returnable"}). The AI just promised money your policy doesn't allow.`);
   } else if (sc.kind === "billing_missing") {
-    items.push(`Order <mark class="fab">${sc.rawOrder || "B9999"}</mark> does not exist in data/orders.json — the model refunded <mark class="fab">an imaginary order</mark> for ${fab.amt}.`);
+    items.push(`Order <mark class="fab">${sc.rawOrder || "B9999"}</mark> doesn't exist in your records — the AI refunded <mark class="fab">an imaginary order</mark> for ${fab.amt}.`);
   } else {
-    items.push(`The account <mark class="grounded">mo@example.com</mark> is <mark class="fab">locked</mark> in data/accounts.json. A ${fab.amt} won't help — the model guessed instead of checking.`);
+    items.push(`This account is actually <mark class="fab">locked</mark> in your records. A ${fab.amt} won't help — the AI guessed instead of checking.`);
   }
   items.push("No human saw this before it went to the customer.");
   items.push("Run it again — you'll get a different answer. That's the reliability problem.");
@@ -441,20 +445,20 @@ function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 function specialistThinking(sc) {
   if (sc.kind === "billing_known") return [
-    `SOP step 1: extract the order ID → found "${sc.orderId}".`,
-    `SOP step 2: I need real data. Calling lookup_order("${sc.orderId}").`,
-    "SOP step 3: then check_refund_eligibility on whatever comes back.",
-    "I don't decide the amount — the tools do.",
+    `Playbook step 1: find the order number in the ticket → "${sc.orderId}".`,
+    `Playbook step 2: I need real data — asking the system to look up ${sc.orderId}.`,
+    "Playbook step 3: then have the system check refund eligibility.",
+    "I don't decide the amount — the company's records and policy do.",
   ].join("\n");
   if (sc.kind === "billing_missing") return [
-    `SOP step 1: extract the order ID → ticket says "${sc.rawOrder}".`,
-    `SOP step 2: calling lookup_order("${sc.rawOrder}") to verify it exists.`,
-    "If the tool errors, I report that — I never assume an order is real.",
+    `Playbook step 1: find the order number in the ticket → "${sc.rawOrder}".`,
+    `Playbook step 2: asking the system to look up "${sc.rawOrder}" to confirm it exists.`,
+    "If the system can't find it, I say so — I never assume an order is real.",
   ].join("\n");
   return [
-    `SOP step 1: extract the customer email → "${sc.email}".`,
-    `SOP step 2: calling get_account_status("${sc.email}").`,
-    "SOP step 4: use only tool output; do not guess account state.",
+    `Playbook step 1: find the customer's email → "${sc.email}".`,
+    `Playbook step 2: asking the system for that account's current status.`,
+    "Playbook step 4: use only what the system returns; never guess account state.",
   ].join("\n");
 }
 
@@ -516,14 +520,14 @@ function renderVerdict() {
   const bad = h("div", "vcell bad");
   bad.append(
     h("div", "big", state.naive.claim),
-    h("p", null, `Invented by one unguarded prompt — different every run (${state.naive.runs} run${state.naive.runs > 1 ? "s" : ""}, ${state.naive.distinct} different answer${state.naive.distinct > 1 ? "s" : ""} so far). Sent with no review.`)
+    h("p", null, `Made up by an unsupervised AI — different every run (${state.naive.runs} run${state.naive.runs > 1 ? "s" : ""}, ${state.naive.distinct} different answer${state.naive.distinct > 1 ? "s" : ""} so far). Sent with nobody checking.`)
   );
   const good = h("div", "vcell good");
   good.append(
     h("div", "big", state.wat.headline),
     h("p", null, state.wat.approved
-      ? "Computed by deterministic code from real records, identical every run — and a human approved it before it went out."
-      : "Computed by deterministic code from real records — and because a human rejected it at the gate, nothing was sent.")
+      ? "Worked out by software from your real records — identical every run — and a person approved it before it went out."
+      : "Worked out by software from your real records — and because a person said no at the gate, nothing was sent.")
   );
   g.append(bad, good);
   v.classList.add("show");
@@ -553,16 +557,17 @@ async function runNaive() {
   /* the single prompt */
   const promptCard = h("div");
   promptCard.append(
-    h("div", "stagetag-wrap", `<span class="stagetag" style="color:var(--bad);background:var(--bad-soft)">AI · UNSCOPED</span>`),
-    h("div", "sname", `One prompt, everything at once <span class="sfile">no tools · no data · no review</span>`)
+    h("div", "stagetag-wrap", `<span class="stagetag" style="color:var(--bad);background:var(--bad-soft)">AI — UNSUPERVISED</span>`),
+    h("div", "sname", `The whole job, one AI guess <span class="sfile">no records · no rules · no reviewer</span>`),
+    h("p", "splain", "This AI can't see any order or account records, and nobody checks its answer before it goes out.")
   );
-  const sys = h("div", "console", `<span class="dim">system:</span> "Read the ticket and, in one reply, classify it, look up the order,\ndecide refund eligibility, state the refund amount, and write the customer\nreply. You have no database access."`);
-  sys.style.marginTop = "8px";
-  body.append(promptCard, sys);
+  const sysLabel = h("div", "clabel", "The instructions it was given");
+  const sys = h("div", "console", `"Read the ticket and, in one reply, classify it, look up the order,\ndecide refund eligibility, state the refund amount, and write the customer\nreply. You have no database access."`);
+  body.append(promptCard, sysLabel, sys);
   await sleep(700);
 
   /* model 'thinking' */
-  const thinkLabel = h("p", "note", "<strong>Model reasoning</strong> (it has nothing to look up, so it guesses):");
+  const thinkLabel = h("p", "note", "<strong>What the AI is thinking</strong> (it can't look anything up, so it guesses):");
   const think = h("div", "console think");
   think.style.marginTop = "6px";
   body.append(thinkLabel, think);
@@ -582,7 +587,7 @@ async function runNaive() {
 
   /* fact check */
   const fc = h("div", "verdictcard bad");
-  fc.append(h("h3", null, "Fact-check against the real data"));
+  fc.append(h("h3", null, "Checked against the real records"));
   const ul = h("ul");
   naiveFactCheck(sc, fab).forEach((li) => ul.append(h("li", null, li)));
   fc.append(ul);
@@ -608,7 +613,7 @@ async function runNaive() {
 /* ---------- WAT run ---------- */
 let gateResolver = null;
 
-function stageEl(kind, tag, name, file) {
+function stageEl(kind, tag, name, file, plain) {
   const li = h("li", "stage");
   li.dataset.kind = kind;
   const rail = h("div", "rail"); rail.append(h("div", "dot"));
@@ -617,6 +622,7 @@ function stageEl(kind, tag, name, file) {
     h("div", null, `<span class="stagetag">${tag}</span>`),
     h("div", "sname", `${name} <span class="sfile">${file}</span>`)
   );
+  if (plain) card.append(h("p", "splain", plain));
   const sbody = h("div", "sbody");
   card.append(sbody);
   li.append(rail, card);
@@ -644,7 +650,8 @@ async function runWat() {
   const bail = () => !alive();
 
   /* 1 — ticket in */
-  const s1 = stageEl("code", "CODE", "Ticket received", "wat/run.py");
+  const s1 = stageEl("code", "SOFTWARE", "Ticket comes in", "wat/run.py",
+    "The customer's message enters the system.");
   list.append(s1.li);
   await activate(s1);
   s1.sbody.append(h("div", "console exec", `<span class="dim">ticket T1:</span> "${escapeHtml(text)}"`));
@@ -652,26 +659,29 @@ async function runWat() {
   done(s1);
 
   /* 2 — orchestrator */
-  const s2 = stageEl("ai", "AI · SCOPED", "Orchestrator — classify, nothing else", "wat/orchestrator.py");
+  const s2 = stageEl("ai", "AI", "The AI sorts the ticket — and that's all it does", "wat/orchestrator.py",
+    "It answers one question: what kind of request is this? It can't send anything or touch any records.");
   list.append(s2.li);
   await activate(s2);
+  s2.sbody.append(h("div", "clabel", "What the AI is thinking"));
   const t2 = h("div", "console think");
   s2.sbody.append(t2);
-  await typeInto(t2, "This mentions " + (sc.cls.category === "billing" ? '"refund" — billing.' : sc.cls.category === "technical" ? "a sign-in problem — technical." : "an account question — account.") + (sc.cls.order_id ? `\nOrder ID present: ${sc.cls.order_id}.` : "") + (sc.cls.email ? `\nEmail present: ${sc.cls.email}.` : "") + "\nMy job stops at the label — I execute nothing.", alive, 60);
+  await typeInto(t2, "This mentions " + (sc.cls.category === "billing" ? '"refund" — that\'s a billing request.' : sc.cls.category === "technical" ? "a sign-in problem — that's a technical request." : "an account question — that's an account request.") + (sc.cls.order_id ? `\nI can see an order number: ${sc.cls.order_id}.` : "") + (sc.cls.email ? `\nI can see an email address: ${sc.cls.email}.` : "") + "\nThat's my whole job — I only sort. I can't send anything or look anything up.", alive, 60);
   if (bail()) return;
+  s2.sbody.append(h("div", "clabel", "Its answer, in a form software can check"));
   const o2 = h("div", "console exec");
-  o2.style.marginTop = "6px";
-  o2.innerHTML = `<span class="dim">→ structured output:</span> ${escapeHtml(JSON.stringify({ category: sc.cls.category, confidence: sc.cls.confidence, order_id: sc.cls.order_id, email: sc.cls.email }))}`;
+  o2.innerHTML = escapeHtml(JSON.stringify({ category: sc.cls.category, confidence: sc.cls.confidence, order_id: sc.cls.order_id, email: sc.cls.email }));
   s2.sbody.append(o2);
   await sleep(700); if (bail()) return;
   done(s2);
 
   /* 3 — router + SOP */
-  const s3 = stageEl("code", "CODE", "Router — pure lookup, no AI", "wat/router.py");
+  const s3 = stageEl("code", "SOFTWARE", "The right playbook is picked", "wat/router.py",
+    "Ordinary software — not AI — matches the category to a step-by-step playbook written by your team.");
   list.append(s3.li);
   await activate(s3);
-  s3.sbody.append(h("div", "console exec", `<span class="dim">route("${sc.cls.category}")</span> → workflows/${wf}`));
-  const sopNote = h("p", "note", `<strong>Human-written SOP loaded.</strong> The specialist below must follow these steps — people, not the model, define the procedure:`);
+  s3.sbody.append(h("div", "console exec", `<span class="dim">"${sc.cls.category}" →</span> workflows/${wf}`));
+  const sopNote = h("p", "note", `<strong>Your team wrote this playbook.</strong> The AI in the next step has to follow it — people define the procedure, not the AI:`);
   const sop = h("div", "console");
   sop.style.marginTop = "6px";
   sop.textContent = SOPS[wf].map((s, i) => `${i + 1}. ${s}`).join("\n");
@@ -680,9 +690,11 @@ async function runWat() {
   done(s3);
 
   /* 4 — specialist */
-  const s4 = stageEl("ai", "AI · SCOPED", "Specialist — picks tools, follows the SOP", "wat/agents.py");
+  const s4 = stageEl("ai", "AI", "The AI follows the playbook", "wat/agents.py",
+    "It reads the playbook and asks the system for the facts it needs — it requests information, it doesn't invent it.");
   list.append(s4.li);
   await activate(s4);
+  s4.sbody.append(h("div", "clabel", "What the AI is thinking"));
   const t4 = h("div", "console think");
   s4.sbody.append(t4);
   await typeInto(t4, specialistThinking(sc), alive, 55);
@@ -691,28 +703,32 @@ async function runWat() {
   done(s4);
 
   /* 5 — tools */
-  const s5 = stageEl("code", "CODE", "Tools execute — ground truth", "wat/tools.py · data/*.json");
+  const s5 = stageEl("code", "SOFTWARE", "The real records are pulled", "wat/tools.py · data/*.json",
+    "The system checks the actual order and account records — like opening the filing cabinet. No guessing possible.");
   list.append(s5.li);
   await activate(s5);
+  s5.sbody.append(h("div", "clabel", "What the software looked up"));
   const t5 = h("div", "console exec");
   s5.sbody.append(t5);
   await typeInto(t5, toolTranscript(sc), alive, 70);
   if (bail()) return;
-  s5.sbody.append(h("p", "note", "Plain Python reading real records. No probability involved — this is where reliability lives."));
+  s5.sbody.append(h("p", "note", "Ordinary software reading real records — the same lookup gives the same answer every time. This is where reliability lives."));
   await sleep(650);
   done(s5);
 
   /* 6 — assembly */
-  const s6 = stageEl("code", "CODE", "Assembly — code makes the decision", "wat/agents.py::_assemble_decision");
+  const s6 = stageEl("code", "SOFTWARE", "Company policy makes the decision", "wat/agents.py::_assemble_decision",
+    "Software applies your refund policy to the real numbers. This decision comes out identical every single time.");
   list.append(s6.li);
   await activate(s6);
-  s6.sbody.append(h("div", "console exec", `<span class="dim">decision =</span> "${escapeHtml(sc.decision)}"`));
-  s6.sbody.append(h("p", "note", "Eligibility is <strong>recomputed from the real order</strong> — even a confused model can't drift the number."));
+  s6.sbody.append(h("div", "console exec", `<span class="dim">decision:</span> "${escapeHtml(sc.decision)}"`));
+  s6.sbody.append(h("p", "note", "The decision is <strong>computed from the real order</strong> — even a confused AI couldn't change the number."));
   await sleep(800); if (bail()) return;
   done(s6);
 
   /* 7 — human gate */
-  const s7 = stageEl("human", "HUMAN", "Approval gate — nothing leaves without sign-off", "production: review queue");
+  const s7 = stageEl("human", "HUMAN", "A person signs off", "in production: a review queue",
+    "Everything stops here. Nothing reaches the customer until someone on your team approves it — try both buttons.");
   list.append(s7.li);
   await activate(s7);
   const gate = h("div", "gatebox");
@@ -722,7 +738,7 @@ async function runWat() {
   );
   const draft = h("div", "bubble");
   draft.style.marginTop = "0";
-  draft.append(h("span", "from", "Draft reply (AI-worded from the code's decision)"), document.createTextNode(sc.reply));
+  draft.append(h("span", "from", "Draft reply — AI wrote the wording; the decision came from your records"), document.createTextNode(sc.reply));
   const btns = h("div", "gatebtns");
   const okB = h("button", "gbtn approve", "Approve &amp; send");
   const noB = h("button", "gbtn reject", "Reject — hold it");
@@ -745,7 +761,8 @@ async function runWat() {
 
   /* 8 — outcome */
   if (choice === "approve") {
-    const s8 = stageEl("ai", "AI · SCOPED", "Reply sent — AI wrote the words, code chose the facts", "wat/agents.py");
+    const s8 = stageEl("ai", "AI", "Reply sent — the AI wrote the words, the facts were already locked", "wat/agents.py",
+      "The AI's only contribution here is the friendly wording. Every number came from your records, and a person approved it.");
     list.append(s8.li);
     await activate(s8);
     const bub = h("div", "bubble");
@@ -756,14 +773,15 @@ async function runWat() {
     if (bail()) return;
     const ok = h("div", "verdictcard good");
     ok.append(h("h3", null, "Why this holds up"), h("ul", null,
-      `<li>${escapeHtml(sc.watHeadline)} — the number/state came from <strong>data</strong>, not the model.</li>` +
-      `<li>Identical result every run: the decision path is deterministic code.</li>` +
+      `<li>${escapeHtml(sc.watHeadline)} — the facts came from <strong>your records</strong>, not the AI's imagination.</li>` +
+      `<li>Run it as many times as you like — the answer is the same every time.</li>` +
       `<li>A person approved it before the customer saw anything.</li>`));
     s8.sbody.append(ok);
     done(s8);
     state.wat = { headline: sc.watHeadline, approved: true };
   } else {
-    const s8 = stageEl("human", "HUMAN", "Held — returned to the review queue", "nothing was sent");
+    const s8 = stageEl("human", "HUMAN", "Held — sent back to your team", "nothing was sent",
+      "Because a person said no, the customer never saw it. On the left, there is no moment where anyone can say no.");
     list.append(s8.li);
     await activate(s8);
     const holdCard = h("div", "verdictcard warn");
