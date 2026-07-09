@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WAT Architecture — Live Demo</title>
+</head>
+<body>
+<style>
+  :root {
+    --bg: #F4F6F8;
+    --panel: #FFFFFF;
+    --panel2: #EDF0F4;
+    --ink: #1C2433;
+    --muted: #5C6B80;
+    --line: #D8DEE6;
+    --ai: #5A50C8;       --ai-soft: #EFEDFB;
+    --code: #0E7D6B;     --code-soft: #E6F4F0;
+    --human: #A26B0F;    --human-soft: #F9F0DC;
+    --bad: #BE3A44;      --bad-soft: #FAE9EA;
+    --good: #0E7D6B;
+    --console-bg: #0F1520;
+    --console-ink: #D7E0EC;
+    --console-dim: #8494AB;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 4px 16px rgba(16,24,40,.06);
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "JetBrains Mono", Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0E1219; --panel: #161C26; --panel2: #1C2432;
+      --ink: #E6EBF2; --muted: #93A1B5; --line: #2A3444;
+      --ai: #998EF2;   --ai-soft: #272446;
+      --code: #41B79F; --code-soft: #16302A;
+      --human: #DDA43F; --human-soft: #382D14;
+      --bad: #E4737D;  --bad-soft: #3B2125;
+      --good: #41B79F;
+      --console-bg: #0A0F17; --console-ink: #D7E0EC; --console-dim: #8494AB;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1219; --panel: #161C26; --panel2: #1C2432;
+    --ink: #E6EBF2; --muted: #93A1B5; --line: #2A3444;
+    --ai: #998EF2;   --ai-soft: #272446;
+    --code: #41B79F; --code-soft: #16302A;
+    --human: #DDA43F; --human-soft: #382D14;
+    --bad: #E4737D;  --bad-soft: #3B2125;
+    --good: #41B79F;
+    --console-bg: #0A0F17; --console-ink: #D7E0EC; --console-dim: #8494AB;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"] {
+    --bg: #F4F6F8; --panel: #FFFFFF; --panel2: #EDF0F4;
+    --ink: #1C2433; --muted: #5C6B80; --line: #D8DEE6;
+    --ai: #5A50C8;   --ai-soft: #EFEDFB;
+    --code: #0E7D6B; --code-soft: #E6F4F0;
+    --human: #A26B0F; --human-soft: #F9F0DC;
+    --bad: #BE3A44;  --bad-soft: #FAE9EA;
+    --good: #0E7D6B;
+    --console-bg: #0F1520; --console-ink: #D7E0EC; --console-dim: #8494AB;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 4px 16px rgba(16,24,40,.06);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); font-size: 16px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 24px 80px; }
+
+  /* ---------- header ---------- */
+  header.masthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 18px; margin-bottom: 6px; }
+  .wordmark { font-family: var(--mono); font-size: 1.7rem; font-weight: 700; letter-spacing: .02em; }
+  .wordmark .w { color: var(--code); } .wordmark .a { color: var(--ai); } .wordmark .t { color: var(--human); }
+  .masthead .expand { font-family: var(--mono); font-size: .8rem; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  .thesis { max-width: 68ch; color: var(--muted); margin: 4px 0 18px; text-wrap: pretty; }
+  .thesis strong { color: var(--ink); font-weight: 600; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 26px; }
+  .key { font-family: var(--mono); font-size: .72rem; letter-spacing: .06em; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); }
+  .key::before { content: "●"; margin-right: 6px; }
+  .key.ai::before { color: var(--ai); } .key.code::before { color: var(--code); } .key.human::before { color: var(--human); }
+
+  /* ---------- ticket deck ---------- */
+  .deck { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 26px; }
+  .deck label { display: block; font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .deck textarea {
+    width: 100%; resize: vertical; min-height: 52px; padding: 10px 12px;
+    font: 500 .95rem/1.5 var(--sans); color: var(--ink);
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .deck textarea:focus-visible { outline: 2px solid var(--ai); outline-offset: 1px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip {
+    font: 500 .8rem/1 var(--sans); color: var(--ink); background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; cursor: pointer;
+  }
+  .chip:hover { border-color: var(--ai); }
+  .chip:focus-visible { outline: 2px solid var(--ai); outline-offset: 1px; }
+  .chip[aria-pressed="true"] { border-color: var(--ai); background: var(--ai-soft); }
+  .deck .hint { font-size: .8rem; color: var(--muted); margin: 10px 0 0; }
+
+  /* ---------- panels ---------- */
+  .arena { display: grid; grid-template-columns: 1fr 1.15fr; gap: 22px; align-items: start; }
+  @media (max-width: 900px) { .arena { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  .panel > .phead {
+    display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .phead h2 { font-family: var(--mono); font-size: .95rem; margin: 0; letter-spacing: .02em; flex: 1; }
+  .phead .sub { display: block; font-family: var(--sans); font-weight: 400; font-size: .78rem; color: var(--muted); letter-spacing: 0; margin-top: 2px; }
+  .panel.naive > .phead { border-top: 3px solid var(--bad); }
+  .panel.wat  > .phead { border-top: 3px solid var(--code); }
+  .runbtn {
+    font: 600 .85rem/1 var(--sans); color: #fff; border: 0; border-radius: 8px;
+    padding: 10px 16px; cursor: pointer; white-space: nowrap;
+  }
+  .panel.naive .runbtn { background: var(--bad); }
+  .panel.wat .runbtn { background: var(--code); }
+  .runbtn:disabled { opacity: .5; cursor: default; }
+  .runbtn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .pbody { padding: 18px; }
+  .empty { color: var(--muted); font-size: .88rem; padding: 26px 10px; text-align: center; }
+
+  /* ---------- stages ---------- */
+  ol.stages { list-style: none; margin: 0; padding: 0; }
+  .stage { display: grid; grid-template-columns: 26px 1fr; gap: 0 12px; opacity: .38; transition: opacity .3s; }
+  .stage.active, .stage.done { opacity: 1; }
+  .rail { position: relative; }
+  .dot {
+    width: 14px; height: 14px; border-radius: 50%; margin: 6px auto 0;
+    border: 3px solid var(--line); background: var(--panel);
+  }
+  .stage[data-kind="ai"].active .dot,   .stage[data-kind="ai"].done .dot   { border-color: var(--ai); }
+  .stage[data-kind="code"].active .dot, .stage[data-kind="code"].done .dot { border-color: var(--code); }
+  .stage[data-kind="human"].active .dot,.stage[data-kind="human"].done .dot{ border-color: var(--human); }
+  .stage.active .dot { animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(1.35); } }
+  @media (prefers-reduced-motion: reduce) { .stage.active .dot { animation: none; } }
+  .rail::after {
+    content: ""; position: absolute; left: 50%; top: 24px; bottom: -6px;
+    width: 2px; transform: translateX(-50%); background: var(--line);
+  }
+  .stage:last-child .rail::after { display: none; }
+  .scard { padding: 2px 0 20px; }
+  .stagetag {
+    display: inline-block; font-family: var(--mono); font-size: .64rem; font-weight: 700;
+    letter-spacing: .12em; padding: 2px 8px; border-radius: 4px; margin-bottom: 4px;
+  }
+  .stage[data-kind="ai"] .stagetag    { color: var(--ai); background: var(--ai-soft); }
+  .stage[data-kind="code"] .stagetag  { color: var(--code); background: var(--code-soft); }
+  .stage[data-kind="human"] .stagetag { color: var(--human); background: var(--human-soft); }
+  .sname { font-weight: 650; font-size: .93rem; }
+  .sfile { font-family: var(--mono); font-size: .7rem; color: var(--muted); margin-left: 8px; }
+  .sbody { margin-top: 8px; display: none; }
+  .stage.active .sbody, .stage.done .sbody { display: block; }
+
+  /* ---------- consoles & bubbles ---------- */
+  .console {
+    font-family: var(--mono); font-size: .78rem; line-height: 1.6;
+    background: var(--console-bg); color: var(--console-ink);
+    border-radius: 8px; padding: 10px 13px; white-space: pre-wrap; word-break: break-word;
+    overflow-x: auto;
+  }
+  .console .dim { color: var(--console-dim); }
+  .console.think { border-left: 3px solid var(--ai); }
+  .console.exec  { border-left: 3px solid var(--code); }
+  .caret::after { content: "▋"; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .note { font-size: .8rem; color: var(--muted); margin: 8px 0 0; max-width: 62ch; }
+  .note strong { color: var(--ink); }
+  .bubble {
+    margin-top: 8px; padding: 12px 15px; border-radius: 10px 10px 10px 3px;
+    background: var(--panel2); border: 1px solid var(--line); font-size: .9rem; max-width: 62ch;
+  }
+  .bubble .from { font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 5px; }
+  mark.fab { background: var(--bad-soft); color: var(--bad); font-weight: 650; padding: 0 3px; border-radius: 3px; }
+  mark.grounded { background: var(--code-soft); color: var(--code); font-weight: 650; padding: 0 3px; border-radius: 3px; }
+
+  .verdictcard {
+    margin-top: 14px; border-radius: 10px; padding: 13px 15px; font-size: .86rem;
+    border: 1px solid; max-width: 100%;
+  }
+  .verdictcard.bad  { border-color: var(--bad); background: var(--bad-soft); }
+  .verdictcard.good { border-color: var(--code); background: var(--code-soft); }
+  .verdictcard.warn { border-color: var(--human); background: var(--human-soft); }
+  .verdictcard h3 { margin: 0 0 6px; font-family: var(--mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; }
+  .verdictcard.bad h3 { color: var(--bad); } .verdictcard.good h3 { color: var(--code); } .verdictcard.warn h3 { color: var(--human); }
+  .verdictcard ul { margin: 0; padding-left: 18px; }
+  .verdictcard li { margin: 3px 0; }
+
+  .runlog { margin-top: 14px; font-size: .78rem; color: var(--muted); }
+  .runlog .amounts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .runlog .amt { font-family: var(--mono); font-size: .74rem; color: var(--bad); background: var(--bad-soft); border-radius: 5px; padding: 2px 8px; }
+
+  /* ---------- human gate ---------- */
+  .gatebox { border: 1.5px dashed var(--human); background: var(--human-soft); border-radius: 10px; padding: 14px 15px; }
+  .gatebox .gq { font-weight: 650; font-size: .9rem; margin: 0 0 4px; }
+  .gatebox .gd { font-size: .84rem; margin: 0 0 10px; }
+  .gatebtns { display: flex; gap: 10px; }
+  .gbtn { font: 600 .85rem/1 var(--sans); border-radius: 8px; padding: 10px 18px; cursor: pointer; border: 1px solid transparent; }
+  .gbtn.approve { background: var(--code); color: #fff; }
+  .gbtn.reject { background: transparent; color: var(--bad); border-color: var(--bad); }
+  .gbtn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .gbtn:disabled { opacity: .45; cursor: default; }
+  .gatewait { font-family: var(--mono); font-size: .72rem; color: var(--human); letter-spacing: .06em; margin-top: 9px; }
+
+  /* ---------- final verdict strip ---------- */
+  #verdict { margin-top: 26px; display: none; }
+  #verdict.show { display: block; }
+  .vgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
+  @media (max-width: 700px) { .vgrid { grid-template-columns: 1fr; } }
+  #verdict > h2 { font-family: var(--mono); font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .vcell { border-radius: 10px; padding: 16px 18px; border: 1px solid; }
+  .vcell.bad { border-color: var(--bad); background: var(--bad-soft); }
+  .vcell.good { border-color: var(--code); background: var(--code-soft); }
+  .vcell .big { font-family: var(--mono); font-size: 1.35rem; font-weight: 700; }
+  .vcell.bad .big { color: var(--bad); } .vcell.good .big { color: var(--code); }
+  .vcell p { margin: 6px 0 0; font-size: .85rem; }
+
+  footer { margin-top: 44px; font-size: .8rem; color: var(--muted); max-width: 75ch; }
+  footer code { font-family: var(--mono); font-size: .74rem; background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="wordmark"><span class="w">W</span><span class="a">A</span><span class="t">T</span></div>
+    <div class="expand">Workflows · Agents · Tools</div>
+  </header>
+  <p class="thesis">
+    Chain five AI steps that are each 90% reliable and the pipeline is right only
+    <strong>59% of the time</strong> (0.9<sup>5</sup> ≈ 0.59). WAT keeps the model in a narrow lane —
+    <strong>classify, choose, word</strong> — while deterministic code computes anything that must be
+    correct, and a <strong>human approves</strong> anything that leaves the building.
+  </p>
+  <div class="legend">
+    <span class="key ai">AI — judgment calls</span>
+    <span class="key code">Code — deterministic truth</span>
+    <span class="key human">Human — approval gate</span>
+  </div>
+
+  <section class="deck" aria-label="Ticket input">
+    <label for="ticket">Incoming support ticket</label>
+    <textarea id="ticket" rows="2">I want a refund for order A1001. How much will I get back?</textarea>
+    <div class="chips" id="chips" role="group" aria-label="Example tickets"></div>
+    <p class="hint">Pick a scenario or type your own, then run each side. Run the left side twice — it never answers the same way.</p>
+  </section>
+
+  <div class="arena">
+    <article class="panel naive" aria-label="Without WAT">
+      <div class="phead">
+        <h2>WITHOUT WAT
+          <span class="sub">One prompt does everything — no tools, no data, no review</span>
+        </h2>
+        <button class="runbtn" id="runNaive">Run &nbsp;▸</button>
+      </div>
+      <div class="pbody" id="naiveBody">
+        <p class="empty">Press Run to send the ticket straight to the model.</p>
+      </div>
+    </article>
+
+    <article class="panel wat" aria-label="With WAT">
+      <div class="phead">
+        <h2>WITH WAT
+          <span class="sub">Scoped AI · deterministic tools · human gate</span>
+        </h2>
+        <button class="runbtn" id="runWat">Run &nbsp;▸</button>
+      </div>
+      <div class="pbody" id="watBody">
+        <p class="empty">Press Run to walk the ticket through the pipeline.</p>
+      </div>
+    </article>
+  </div>
+
+  <section id="verdict" aria-label="Side-by-side verdict">
+    <h2>Same ticket, two architectures</h2>
+    <div class="vgrid" id="verdictGrid"></div>
+  </section>
+
+  <footer>
+    <p>This page is a faithful, offline simulation of the <code>wat-demo</code> reference implementation:
+    the classification rules, routing table, workflow SOPs, tool logic, and fixture data
+    (<code>data/orders.json</code>, <code>data/accounts.json</code>) are the real ones from the repo.
+    In production the same shape holds — the pipeline just runs behind a job queue with retries,
+    idempotent tools, and observability on every step.</p>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- ground truth (mirrors data/*.json exactly) ---------- */
+const ORDERS = {
+  A1001: { order_id: "A1001", email: "dana@example.com", total: 84.50, status: "delivered", days_since_delivery: 5,  returnable: true  },
+  A1002: { order_id: "A1002", email: "lee@example.com",  total: 240.00, status: "delivered", days_since_delivery: 45, returnable: false },
+  A1003: { order_id: "A1003", email: "mo@example.com",   total: 19.99, status: "shipped",   days_since_delivery: 0,  returnable: true  },
+};
+const ACCOUNTS = {
+  "dana@example.com": { email: "dana@example.com", plan: "pro",  status: "active", mfa_enabled: true  },
+  "lee@example.com":  { email: "lee@example.com",  plan: "free", status: "active", mfa_enabled: false },
+  "mo@example.com":   { email: "mo@example.com",   plan: "pro",  status: "locked", mfa_enabled: true  },
+};
+const SOPS = {
+  "billing.md": ["Extract the order ID from the ticket.", "Call lookup_order to get the order.", "Call check_refund_eligibility with that order.", "Do NOT invent order totals or eligibility. Use only tool output.", "Write a short, friendly reply stating the decision and amount."],
+  "technical.md": ["Extract the customer email from the ticket.", "Call get_account_status to check the account.", "If locked, tell the customer support will unlock it; if MFA is off, suggest enabling it.", "Use only tool output; do not guess account state.", "Write a short, friendly reply with the next step."],
+  "account.md": ["Extract the customer email from the ticket.", "Call get_account_status to read plan and status.", "Answer using only the tool output.", "Write a short, friendly reply."],
+};
+
+/* mirrors wat/tools.py check_refund_eligibility */
+function checkEligibility(order) {
+  if (order.returnable && order.days_since_delivery <= 30)
+    return { eligible: true, amount: order.total, reason: "within return window" };
+  return { eligible: false, amount: 0, reason: "outside return window or non-returnable" };
+}
+
+/* mirrors MockLLM.classify keyword rules */
+function classify(text) {
+  const t = text.toLowerCase();
+  const order = (text.match(/\bA\d{4}\b/) || text.match(/\b[A-Z]\d{4}\b/) || [null])[0];
+  let email = (text.match(/[\w.\-]+@[\w.\-]+/) || [null])[0];
+  if (email) email = email.replace(/[.,;:!?]+$/, "");
+  if (/(refund|charge|bill|invoice|payment)/.test(t)) return { category: "billing", confidence: 0.95, order_id: order, email };
+  if (/(log in|login|error|bug|broken|password reset|locked)/.test(t)) return { category: "technical", confidence: 0.90, order_id: order, email };
+  return { category: "account", confidence: 0.80, order_id: order, email };
+}
+
+/* ---------- presets ---------- */
+const PRESETS = [
+  { label: "Refund — valid order",   text: "I want a refund for order A1001. How much will I get back?" },
+  { label: "Refund — expired window", text: "I'd like a refund for order A1002." },
+  { label: "Locked account",          text: "I can't log in to my account — mo@example.com. Please help." },
+  { label: "Order that doesn't exist", text: "Requesting a refund for order B9999." },
+];
+
+/* invented answers the naive prompt gives, per scenario, cycling per run */
+const FABRICATIONS = {
+  billing_known: [
+    { amt: "$59.99", line: "you're eligible for a full refund of $59.99" },
+    { amt: "$100.00", line: "we've approved a $100.00 refund to your card" },
+    { amt: "$92.40", line: "your refund of $92.40 will arrive in 3–5 days" },
+    { amt: "$75.00 credit", line: "we've added a $75.00 store credit to your account" },
+  ],
+  billing_missing: [
+    { amt: "$45.00", line: "your order qualifies — a $45.00 refund is on its way" },
+    { amt: "$120.00", line: "we've refunded the full $120.00 for that order" },
+    { amt: "$63.75", line: "a refund of $63.75 has been processed" },
+    { amt: "$88.20", line: "you'll receive $88.20 back within a week" },
+  ],
+  technical: [
+    { amt: "password reset", line: "just click 'Forgot password' and reset it — that should fix it" },
+    { amt: "clear cache", line: "clearing your browser cache and cookies should resolve this" },
+    { amt: "wait 24h", line: "our system sometimes lags — try again in 24 hours" },
+    { amt: "re-register", line: "the fastest fix is to create a fresh account" },
+  ],
+};
+
+function naiveThinking(sc, fab) {
+  if (sc.kind === "technical") return [
+    "Customer can't log in. I have no access to their account records,",
+    "but I should sound helpful and confident...",
+    "Login problems are usually a forgotten password. I'll go with that.",
+  ].join("\n");
+  const known = sc.kind === "billing_known";
+  return [
+    `Customer wants a refund for order ${sc.orderId || "(no valid ID)"}.`,
+    "I have no database access, so I can't see the order...",
+    "but I should still sound helpful and confident.",
+    known ? "A typical order like this is probably around " + fab.amt + "." : "The order number looks plausible — I'll assume it exists.",
+    "It was probably delivered recently, so it should be in the return window.",
+    "I'll approve it.",
+  ].join("\n");
+}
+
+function naiveReply(sc, fab) {
+  if (sc.kind === "technical")
+    return `Hi! Sorry you're locked out — ${fab.line}. Let us know if you need anything else!`;
+  return `Hi! Great news — ${fab.line}. Thanks for shopping with us!`;
+}
+
+function naiveFactCheck(sc, fab) {
+  const items = [];
+  if (sc.kind === "billing_known") {
+    const o = ORDERS[sc.orderId]; const e = checkEligibility(o);
+    items.push(`Claimed <mark class="fab">${fab.amt}</mark> — the real order total in data/orders.json is <mark class="grounded">$${o.total.toFixed(2)}</mark>.`);
+    if (!e.eligible) items.push(`Worse: this order is <mark class="fab">not refundable at all</mark> (${o.days_since_delivery} days since delivery, returnable: ${o.returnable}). The model just promised money the policy doesn't allow.`);
+  } else if (sc.kind === "billing_missing") {
+    items.push(`Order <mark class="fab">${sc.rawOrder || "B9999"}</mark> does not exist in data/orders.json — the model refunded <mark class="fab">an imaginary order</mark> for ${fab.amt}.`);
+  } else {
+    items.push(`The account <mark class="grounded">mo@example.com</mark> is <mark class="fab">locked</mark> in data/accounts.json. A ${fab.amt} won't help — the model guessed instead of checking.`);
+  }
+  items.push("No human saw this before it went to the customer.");
+  items.push("Run it again — you'll get a different answer. That's the reliability problem.");
+  return items;
+}
+
+/* ---------- WAT scenario builder ---------- */
+function buildScenario(text) {
+  const cls = classify(text);
+  const sc = { text, cls };
+  if (cls.category === "billing") {
+    const oid = cls.order_id;
+    if (oid && ORDERS[oid]) {
+      const o = ORDERS[oid]; const e = checkEligibility(o);
+      sc.kind = "billing_known"; sc.orderId = oid; sc.order = o; sc.elig = e;
+      sc.decision = e.eligible
+        ? `Refund eligible: $${e.amount.toFixed(2)} (${e.reason}).`
+        : `Refund not eligible (${e.reason}).`;
+      const name = o.email.split("@")[0];
+      sc.reply = e.eligible
+        ? `Hi ${cap(name)} — good news: order ${oid} qualifies for a full refund of $${e.amount.toFixed(2)} (delivered ${o.days_since_delivery} days ago, inside the 30-day window). You'll see it on your original payment method in 3–5 business days.`
+        : `Hi ${cap(name)} — I checked order ${oid}: it was delivered ${o.days_since_delivery} days ago${o.returnable ? "" : " and is marked non-returnable"}, which puts it outside our 30-day refund window, so I'm unable to issue a refund. I'm sorry to disappoint — if something arrived damaged or defective, reply here and we'll look at other options.`;
+      sc.watHeadline = e.eligible ? `$${e.amount.toFixed(2)} — computed from the real order` : "Refund correctly declined — policy applied to real data";
+    } else {
+      const raw = (text.match(/\b[A-Z]\d{4}\b/) || [cls.order_id || "the order"])[0];
+      sc.kind = "billing_missing"; sc.rawOrder = raw;
+      sc.decision = "No matching order found.";
+      sc.reply = `Hi — I couldn't find an order matching ${raw}. Could you double-check the order number (ours look like A1234)? As soon as we have it, I'll take care of this right away.`;
+      sc.watHeadline = "Nothing refunded — the order doesn't exist";
+    }
+  } else {
+    const email = cls.email && ACCOUNTS[cls.email] ? cls.email : (cls.email || "mo@example.com");
+    const acct = ACCOUNTS[email];
+    sc.kind = "technical"; sc.email = email; sc.acct = acct || { error: "account not found" };
+    if (acct) {
+      sc.decision = `Account ${acct.email}: plan=${acct.plan}, status=${acct.status}.`;
+      sc.reply = acct.status === "locked"
+        ? `Hi — I checked your account (${acct.email}): it's currently locked, which is why sign-in fails. Our support team is unlocking it now; you'll get an email the moment it's done. (MFA is ${acct.mfa_enabled ? "already enabled — nice" : "off — we recommend enabling it once you're back in"}.)`
+        : `Hi — your account (${acct.email}) is active on the ${acct.plan} plan, so a stale session is the likely culprit. Try signing out everywhere and back in. ${acct.mfa_enabled ? "" : "We'd also recommend enabling MFA for extra security."}`;
+      sc.watHeadline = acct.status === "locked" ? "Real cause found: account is locked" : "Answered from real account state";
+    } else {
+      sc.decision = "No matching account found.";
+      sc.reply = `Hi — I couldn't find an account for ${email}. Could you confirm the email address you signed up with? I'll pick this right up once we have it.`;
+      sc.watHeadline = "No guessing — asked for the right account";
+    }
+  }
+  return sc;
+}
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function specialistThinking(sc) {
+  if (sc.kind === "billing_known") return [
+    `SOP step 1: extract the order ID → found "${sc.orderId}".`,
+    `SOP step 2: I need real data. Calling lookup_order("${sc.orderId}").`,
+    "SOP step 3: then check_refund_eligibility on whatever comes back.",
+    "I don't decide the amount — the tools do.",
+  ].join("\n");
+  if (sc.kind === "billing_missing") return [
+    `SOP step 1: extract the order ID → ticket says "${sc.rawOrder}".`,
+    `SOP step 2: calling lookup_order("${sc.rawOrder}") to verify it exists.`,
+    "If the tool errors, I report that — I never assume an order is real.",
+  ].join("\n");
+  return [
+    `SOP step 1: extract the customer email → "${sc.email}".`,
+    `SOP step 2: calling get_account_status("${sc.email}").`,
+    "SOP step 4: use only tool output; do not guess account state.",
+  ].join("\n");
+}
+
+function toolTranscript(sc) {
+  const L = [];
+  if (sc.kind === "billing_known") {
+    L.push(`▸ lookup_order("${sc.orderId}")`);
+    L.push("  " + JSON.stringify(sc.order));
+    L.push(`▸ check_refund_eligibility(order)`);
+    L.push("  " + JSON.stringify(sc.elig));
+  } else if (sc.kind === "billing_missing") {
+    L.push(`▸ lookup_order("${sc.rawOrder}")`);
+    L.push('  {"error": "order not found"}');
+  } else {
+    L.push(`▸ get_account_status("${sc.email}")`);
+    L.push("  " + JSON.stringify(sc.acct));
+  }
+  return L.join("\n");
+}
+
+/* ---------- animation engine ---------- */
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const tokens = { naive: 0, wat: 0 };
+const sleep = (ms) => new Promise((r) => setTimeout(r, reduced ? Math.min(ms, 40) : ms));
+
+async function typeInto(el, text, alive, cps) {
+  if (reduced) { el.textContent = text; return; }
+  el.classList.add("caret");
+  el.textContent = "";
+  const step = Math.max(1, Math.round(text.length / (cps || 90)));
+  for (let i = 0; i < text.length; i += step) {
+    if (!alive()) break;
+    el.textContent = text.slice(0, i + step);
+    await sleep(16);
+  }
+  el.textContent = text;
+  el.classList.remove("caret");
+}
+
+function h(tag, cls, html) {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (html != null) el.innerHTML = html;
+  return el;
+}
+
+/* ---------- shared state for the verdict strip ---------- */
+const state = { ticketKey: null, naive: null, wat: null };
+function ticketKey() { return document.getElementById("ticket").value.trim(); }
+function resetVerdictIfNewTicket() {
+  const k = ticketKey();
+  if (state.ticketKey !== k) { state.ticketKey = k; state.naive = null; state.wat = null; renderVerdict(); }
+}
+function renderVerdict() {
+  const v = document.getElementById("verdict");
+  const g = document.getElementById("verdictGrid");
+  if (!state.naive || !state.wat) { v.classList.remove("show"); return; }
+  g.innerHTML = "";
+  const bad = h("div", "vcell bad");
+  bad.append(
+    h("div", "big", state.naive.claim),
+    h("p", null, `Invented by one unguarded prompt — different every run (${state.naive.runs} run${state.naive.runs > 1 ? "s" : ""}, ${state.naive.distinct} different answer${state.naive.distinct > 1 ? "s" : ""} so far). Sent with no review.`)
+  );
+  const good = h("div", "vcell good");
+  good.append(
+    h("div", "big", state.wat.headline),
+    h("p", null, state.wat.approved
+      ? "Computed by deterministic code from real records, identical every run — and a human approved it before it went out."
+      : "Computed by deterministic code from real records — and because a human rejected it at the gate, nothing was sent.")
+  );
+  g.append(bad, good);
+  v.classList.add("show");
+  v.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "nearest" });
+}
+
+/* ---------- naive run ---------- */
+const naiveHistory = { key: null, runs: 0, amounts: [] };
+
+async function runNaive() {
+  const token = ++tokens.naive;
+  const alive = () => token === tokens.naive;
+  resetVerdictIfNewTicket();
+  const body = document.getElementById("naiveBody");
+  const btn = document.getElementById("runNaive");
+  btn.disabled = true;
+  body.innerHTML = "";
+  try {
+  const text = ticketKey();
+  const sc = buildScenario(text);
+  if (naiveHistory.key !== text) { naiveHistory.key = text; naiveHistory.runs = 0; naiveHistory.amounts = []; }
+  const fabs = FABRICATIONS[sc.kind] || FABRICATIONS.billing_missing;
+  const fab = fabs[naiveHistory.runs % fabs.length];
+  naiveHistory.runs++;
+  if (!naiveHistory.amounts.includes(fab.amt)) naiveHistory.amounts.push(fab.amt);
+
+  /* the single prompt */
+  const promptCard = h("div");
+  promptCard.append(
+    h("div", "stagetag-wrap", `<span class="stagetag" style="color:var(--bad);background:var(--bad-soft)">AI · UNSCOPED</span>`),
+    h("div", "sname", `One prompt, everything at once <span class="sfile">no tools · no data · no review</span>`)
+  );
+  const sys = h("div", "console", `<span class="dim">system:</span> "Read the ticket and, in one reply, classify it, look up the order,\ndecide refund eligibility, state the refund amount, and write the customer\nreply. You have no database access."`);
+  sys.style.marginTop = "8px";
+  body.append(promptCard, sys);
+  await sleep(700);
+
+  /* model 'thinking' */
+  const thinkLabel = h("p", "note", "<strong>Model reasoning</strong> (it has nothing to look up, so it guesses):");
+  const think = h("div", "console think");
+  think.style.marginTop = "6px";
+  body.append(thinkLabel, think);
+  await typeInto(think, naiveThinking(sc, fab), alive, 55);
+  if (!alive()) return;
+  await sleep(450);
+
+  /* the reply it fires off */
+  const bub = h("div", "bubble");
+  bub.append(h("span", "from", "Sent to customer — instantly, no approval"));
+  const bubText = h("span");
+  bub.append(bubText);
+  body.append(bub);
+  await typeInto(bubText, naiveReply(sc, fab), alive, 70);
+  if (!alive()) return;
+  await sleep(500);
+
+  /* fact check */
+  const fc = h("div", "verdictcard bad");
+  fc.append(h("h3", null, "Fact-check against the real data"));
+  const ul = h("ul");
+  naiveFactCheck(sc, fab).forEach((li) => ul.append(h("li", null, li)));
+  fc.append(ul);
+  body.append(fc);
+
+  /* run history */
+  if (naiveHistory.runs >= 1) {
+    const log = h("div", "runlog", `Answers this ticket has gotten so far (${naiveHistory.runs} run${naiveHistory.runs > 1 ? "s" : ""}):`);
+    const amts = h("div", "amounts");
+    naiveHistory.amounts.forEach((a) => amts.append(h("span", "amt", a)));
+    log.append(amts);
+    body.append(log);
+  }
+
+  state.naive = { claim: fab.amt, runs: naiveHistory.runs, distinct: naiveHistory.amounts.length };
+  renderVerdict();
+  btn.textContent = "Run again ▸";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---------- WAT run ---------- */
+let gateResolver = null;
+
+function stageEl(kind, tag, name, file) {
+  const li = h("li", "stage");
+  li.dataset.kind = kind;
+  const rail = h("div", "rail"); rail.append(h("div", "dot"));
+  const card = h("div", "scard");
+  card.append(
+    h("div", null, `<span class="stagetag">${tag}</span>`),
+    h("div", "sname", `${name} <span class="sfile">${file}</span>`)
+  );
+  const sbody = h("div", "sbody");
+  card.append(sbody);
+  li.append(rail, card);
+  return { li, sbody };
+}
+
+async function runWat() {
+  const token = ++tokens.wat;
+  const alive = () => token === tokens.wat;
+  if (gateResolver) { gateResolver("cancelled"); gateResolver = null; }
+  resetVerdictIfNewTicket();
+  const body = document.getElementById("watBody");
+  const btn = document.getElementById("runWat");
+  btn.disabled = true;
+  body.innerHTML = "";
+  try {
+  const text = ticketKey();
+  const sc = buildScenario(text);
+  const wf = { billing: "billing.md", technical: "technical.md", account: "account.md" }[sc.cls.category];
+  const list = h("ol", "stages");
+  body.append(list);
+
+  const activate = async (s) => { s.li.classList.add("active"); await sleep(350); };
+  const done = (s) => { s.li.classList.remove("active"); s.li.classList.add("done"); };
+  const bail = () => !alive();
+
+  /* 1 — ticket in */
+  const s1 = stageEl("code", "CODE", "Ticket received", "wat/run.py");
+  list.append(s1.li);
+  await activate(s1);
+  s1.sbody.append(h("div", "console exec", `<span class="dim">ticket T1:</span> "${escapeHtml(text)}"`));
+  await sleep(650); if (bail()) return;
+  done(s1);
+
+  /* 2 — orchestrator */
+  const s2 = stageEl("ai", "AI · SCOPED", "Orchestrator — classify, nothing else", "wat/orchestrator.py");
+  list.append(s2.li);
+  await activate(s2);
+  const t2 = h("div", "console think");
+  s2.sbody.append(t2);
+  await typeInto(t2, "This mentions " + (sc.cls.category === "billing" ? '"refund" — billing.' : sc.cls.category === "technical" ? "a sign-in problem — technical." : "an account question — account.") + (sc.cls.order_id ? `\nOrder ID present: ${sc.cls.order_id}.` : "") + (sc.cls.email ? `\nEmail present: ${sc.cls.email}.` : "") + "\nMy job stops at the label — I execute nothing.", alive, 60);
+  if (bail()) return;
+  const o2 = h("div", "console exec");
+  o2.style.marginTop = "6px";
+  o2.innerHTML = `<span class="dim">→ structured output:</span> ${escapeHtml(JSON.stringify({ category: sc.cls.category, confidence: sc.cls.confidence, order_id: sc.cls.order_id, email: sc.cls.email }))}`;
+  s2.sbody.append(o2);
+  await sleep(700); if (bail()) return;
+  done(s2);
+
+  /* 3 — router + SOP */
+  const s3 = stageEl("code", "CODE", "Router — pure lookup, no AI", "wat/router.py");
+  list.append(s3.li);
+  await activate(s3);
+  s3.sbody.append(h("div", "console exec", `<span class="dim">route("${sc.cls.category}")</span> → workflows/${wf}`));
+  const sopNote = h("p", "note", `<strong>Human-written SOP loaded.</strong> The specialist below must follow these steps — people, not the model, define the procedure:`);
+  const sop = h("div", "console");
+  sop.style.marginTop = "6px";
+  sop.textContent = SOPS[wf].map((s, i) => `${i + 1}. ${s}`).join("\n");
+  s3.sbody.append(sopNote, sop);
+  await sleep(900); if (bail()) return;
+  done(s3);
+
+  /* 4 — specialist */
+  const s4 = stageEl("ai", "AI · SCOPED", "Specialist — picks tools, follows the SOP", "wat/agents.py");
+  list.append(s4.li);
+  await activate(s4);
+  const t4 = h("div", "console think");
+  s4.sbody.append(t4);
+  await typeInto(t4, specialistThinking(sc), alive, 55);
+  if (bail()) return;
+  await sleep(400);
+  done(s4);
+
+  /* 5 — tools */
+  const s5 = stageEl("code", "CODE", "Tools execute — ground truth", "wat/tools.py · data/*.json");
+  list.append(s5.li);
+  await activate(s5);
+  const t5 = h("div", "console exec");
+  s5.sbody.append(t5);
+  await typeInto(t5, toolTranscript(sc), alive, 70);
+  if (bail()) return;
+  s5.sbody.append(h("p", "note", "Plain Python reading real records. No probability involved — this is where reliability lives."));
+  await sleep(650);
+  done(s5);
+
+  /* 6 — assembly */
+  const s6 = stageEl("code", "CODE", "Assembly — code makes the decision", "wat/agents.py::_assemble_decision");
+  list.append(s6.li);
+  await activate(s6);
+  s6.sbody.append(h("div", "console exec", `<span class="dim">decision =</span> "${escapeHtml(sc.decision)}"`));
+  s6.sbody.append(h("p", "note", "Eligibility is <strong>recomputed from the real order</strong> — even a confused model can't drift the number."));
+  await sleep(800); if (bail()) return;
+  done(s6);
+
+  /* 7 — human gate */
+  const s7 = stageEl("human", "HUMAN", "Approval gate — nothing leaves without sign-off", "production: review queue");
+  list.append(s7.li);
+  await activate(s7);
+  const gate = h("div", "gatebox");
+  gate.append(
+    h("p", "gq", "Approve this outbound reply?"),
+    h("p", "gd", `<strong>Decision:</strong> ${escapeHtml(sc.decision)}`)
+  );
+  const draft = h("div", "bubble");
+  draft.style.marginTop = "0";
+  draft.append(h("span", "from", "Draft reply (AI-worded from the code's decision)"), document.createTextNode(sc.reply));
+  const btns = h("div", "gatebtns");
+  const okB = h("button", "gbtn approve", "Approve &amp; send");
+  const noB = h("button", "gbtn reject", "Reject — hold it");
+  btns.append(okB, noB);
+  const waitMsg = h("p", "gatewait", "⏸ pipeline paused — waiting for a human …");
+  gate.append(draft, btns, waitMsg);
+  s7.sbody.append(gate);
+  s7.li.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "nearest" });
+
+  const choice = await new Promise((resolve) => {
+    gateResolver = resolve;
+    okB.addEventListener("click", () => resolve("approve"));
+    noB.addEventListener("click", () => resolve("reject"));
+  });
+  gateResolver = null;
+  if (choice === "cancelled" || bail()) return;
+  okB.disabled = true; noB.disabled = true;
+  waitMsg.textContent = choice === "approve" ? "✓ approved by human" : "✕ rejected by human — nothing sent";
+  done(s7);
+
+  /* 8 — outcome */
+  if (choice === "approve") {
+    const s8 = stageEl("ai", "AI · SCOPED", "Reply sent — AI wrote the words, code chose the facts", "wat/agents.py");
+    list.append(s8.li);
+    await activate(s8);
+    const bub = h("div", "bubble");
+    bub.append(h("span", "from", "Sent to customer — after human approval"));
+    const bt = h("span"); bub.append(bt);
+    s8.sbody.append(bub);
+    await typeInto(bt, sc.reply, alive, 80);
+    if (bail()) return;
+    const ok = h("div", "verdictcard good");
+    ok.append(h("h3", null, "Why this holds up"), h("ul", null,
+      `<li>${escapeHtml(sc.watHeadline)} — the number/state came from <strong>data</strong>, not the model.</li>` +
+      `<li>Identical result every run: the decision path is deterministic code.</li>` +
+      `<li>A person approved it before the customer saw anything.</li>`));
+    s8.sbody.append(ok);
+    done(s8);
+    state.wat = { headline: sc.watHeadline, approved: true };
+  } else {
+    const s8 = stageEl("human", "HUMAN", "Held — returned to the review queue", "nothing was sent");
+    list.append(s8.li);
+    await activate(s8);
+    const holdCard = h("div", "verdictcard warn");
+    holdCard.append(h("h3", null, "Safe failure mode"), h("ul", null,
+      `<li>The human said no, so <strong>no message left the building</strong>.</li>` +
+      `<li>Compare the left panel: without WAT there is no moment where anyone can say no.</li>`));
+    s8.sbody.append(holdCard);
+    done(s8);
+    state.wat = { headline: "Held at the gate — nothing sent", approved: false };
+  }
+  renderVerdict();
+  btn.textContent = "Run again ▸";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+/* ---------- wire up ---------- */
+const chipsEl = document.getElementById("chips");
+PRESETS.forEach((p, i) => {
+  const b = h("button", "chip", escapeHtml(p.label));
+  b.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+  b.addEventListener("click", () => {
+    document.getElementById("ticket").value = p.text;
+    chipsEl.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "false"));
+    b.setAttribute("aria-pressed", "true");
+    document.getElementById("runNaive").textContent = "Run ▸";
+    document.getElementById("runWat").textContent = "Run ▸";
+    resetVerdictIfNewTicket();
+  });
+  chipsEl.append(b);
+});
+document.getElementById("ticket").addEventListener("input", () => {
+  chipsEl.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "false"));
+});
+document.getElementById("runNaive").addEventListener("click", runNaive);
+document.getElementById("runWat").addEventListener("click", runWat);
+</script>
+
+</body>
+</html>
