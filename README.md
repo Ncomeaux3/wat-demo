@@ -7,6 +7,14 @@ The idea: chaining LLM steps that are each ~90% reliable compounds error fast
 (0.9^5 ≈ 0.59). So keep the model in a narrow lane — classify, pick an action,
 draft wording — and let deterministic code do the work that has to be correct.
 
+## See it
+
+![The browser demo: the same refund ticket run without WAT, where the AI guesses $59.99, and with WAT, where the order records say $84.50](docs/screenshots/compare.jpg)
+
+Open `demo/index.html` in a browser to run it yourself. It works offline.
+
+![The last step: a person approves the reply before it reaches the customer](docs/screenshots/approve.jpg)
+
 ## The example
 
 A support-ticket triage flow:
@@ -62,3 +70,7 @@ pipeline are tested through the offline mock, so the suite needs no API key.
 Real systems add: a job queue around the workflow, retries and idempotency in
 the tools, a human approval gate before any outbound action, and observability
 on every step. The shape — scoped AI, deterministic execution — stays the same.
+
+This pattern ran Soltreya, a solo side project I built and ran from March to June 2026:
+
+![The WAT framework as it ran in Soltreya: a Claude orchestrator routes requests to specialist agents, the agents follow Markdown workflows, and deterministic Python tools do the work](docs/screenshots/architecture.jpg)
